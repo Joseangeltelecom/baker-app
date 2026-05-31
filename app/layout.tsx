@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -20,9 +21,24 @@ export default function RootLayout({
             <p className="text-center text-pink-100 text-sm mt-1">
               Escala tus recetas favoritas fácilmente
             </p>
+
+            {/* ---- Navegación ---- */}
+            <nav className="flex justify-center gap-6 mt-3 text-sm font-medium">
+              <Link href="/" className="hover:text-yellow-200 transition-colors">
+                🍰 Recetas
+              </Link>
+              <Link href="/productos" className="hover:text-yellow-200 transition-colors">
+                📦 Productos
+              </Link>
+              <Link href="/escanear" className="hover:text-yellow-200 transition-colors">
+                📸 Escanear
+              </Link>
+            </nav>
           </div>
         </header>
+
         {children}
+
         <footer className="text-center py-4 text-gray-500 text-sm">
           Hecho con ❤️ para la mejor repostera
         </footer>

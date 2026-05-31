@@ -20,10 +20,22 @@ export async function GET(
       return NextResponse.json({ error: 'Receta no encontrada' }, { status: 404 });
     }
 
-    const ingredientsResult = await db.execute({
-      sql: 'SELECT * FROM ingredients WHERE recipe_id = ? ORDER BY id ASC',
-      args: [id],
-    });
+  const ingredientsResult = await db.execute({
+    sql: `
+      SELECT 
+        i.id, i.recipe_id, i.name, i.quantity, i.unit, i.product_id,
+        p.name as product_name,
+        p.current_price as product_price,
+        p.unit as product_unit,
+        p.brand as product_brand,
+        p.store as product_store
+      FROM ingredients i
+      LEFT JOIN products p ON i.product_id = p.id
+      WHERE i.recipe_id = ?
+      ORDER BY i.id ASC
+    `,
+    args: [id],
+  });
 
     const recipe = {
       ...recipeResult.rows[0],

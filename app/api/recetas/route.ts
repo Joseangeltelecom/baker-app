@@ -44,8 +44,8 @@ export async function POST(request: NextRequest) {
           throw new Error('Cada ingrediente debe tener nombre, cantidad y unidad');
         }
         await transaction.execute({
-          sql: 'INSERT INTO ingredients (recipe_id, name, quantity, unit) VALUES (?, ?, ?, ?)',
-          args: [recipeId, ing.name, ing.quantity, ing.unit],
+          sql: 'INSERT INTO ingredients (recipe_id, name, quantity, unit, product_id) VALUES (?, ?, ?, ?, ?)',
+          args: [recipeId, ing.name, ing.quantity, ing.unit, ing.product_id || null],
         });
       }
 

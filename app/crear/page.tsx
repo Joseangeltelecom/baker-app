@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -8,24 +8,39 @@ interface IngredientRow {
   name: string;
   quantity: string;
   unit: string;
+  productId?: number | null;
 }
 
 export default function CreateRecipe() {
   const [name, setName] = useState('');
   const [ingredients, setIngredients] = useState<IngredientRow[]>([
-    { name: '', quantity: '', unit: 'g' },
+    { name: '', quantity: '', unit: 'g', productId: null },
   ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
 
+  // 📦 Catálogo de productos
+  const [catalog, setCatalog] = useState<any[]>([]);
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/products')
+      .then(res => res.json())
+      .then(data => {
+        setCatalog(data);
+        setCatalogLoaded(true);
+      })
+      .catch(err => console.error('Error al cargar catálogo:', err));
+  }, []);
+
   const addRow = () => {
-    setIngredients([...ingredients, { name: '', quantity: '', unit: 'g' }]);
+    setIngredients([...ingredients, { name: '', quantity: '', unit: 'g', productId: null }]);
   };
 
-  const updateRow = (index: number, field: keyof IngredientRow, value: string) => {
+  const updateRow = (index: number, field: keyof IngredientRow, value: string | number | null) => {
     const updated = [...ingredients];
-    updated[index][field] = value;
+    (updated[index] as any)[field] = value;
     setIngredients(updated);
   };
 
@@ -35,11 +50,26 @@ export default function CreateRecipe() {
     }
   };
 
+  const handleProductSelect = (index: number, productId: string) => {
+    const id = productId ? parseInt(productId) : null;
+    const updated = [...ingredients];
+    updated[index].productId = id;
+
+    // Auto‑rellenar si se eligió un producto
+    if (id) {
+      const product = catalog.find(p => p.id === id);
+      if (product) {
+        updated[index].name = product.name;
+        updated[index].unit = product.unit;
+      }
+    }
+    setIngredients(updated);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Validar
     if (!name.trim()) {
       setError('El nombre de la receta es obligatorio');
       return;
@@ -51,7 +81,6 @@ export default function CreateRecipe() {
       return;
     }
 
-    // Validar que todas las cantidades sean números válidos
     for (const ing of validIngredients) {
       if (!ing.quantity || parseFloat(ing.quantity) <= 0) {
         setError(`La cantidad de "${ing.name}" debe ser un número mayor a 0`);
@@ -65,6 +94,7 @@ export default function CreateRecipe() {
         name: ing.name.trim(),
         quantity: parseFloat(ing.quantity),
         unit: ing.unit,
+        product_id: ing.productId ?? null,   // ← importante
       }));
 
       const res = await fetch('/api/recetas', {
@@ -136,55 +166,73 @@ export default function CreateRecipe() {
               {ingredients.map((ing, idx) => (
                 <div
                   key={idx}
-                  className="flex gap-2 items-start bg-gray-50 p-3 rounded-lg"
+                  className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-2"
                 >
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      placeholder="Nombre del ingrediente"
-                      value={ing.name}
-                      onChange={e => updateRow(idx, 'name', e.target.value)}
-                      required
-                      className="border-2 border-gray-200 rounded px-3 py-2 w-full focus:outline-none focus:border-pink-500"
-                    />
-                  </div>
-                  <div className="w-28">
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="Cantidad"
-                      value={ing.quantity}
-                      onChange={e => updateRow(idx, 'quantity', e.target.value)}
-                      required
-                      className="border-2 border-gray-200 rounded px-3 py-2 w-full focus:outline-none focus:border-pink-500"
-                    />
-                  </div>
-                  <div className="w-32">
-                    <select
-                      value={ing.unit}
-                      onChange={e => updateRow(idx, 'unit', e.target.value)}
-                      className="border-2 border-gray-200 rounded px-3 py-2 w-full focus:outline-none focus:border-pink-500 bg-white"
-                    >
-                      <option value="g">gramos (g)</option>
-                      <option value="kg">kilogramos (kg)</option>
-                      <option value="ml">mililitros (ml)</option>
-                      <option value="l">litros (l)</option>
-                      <option value="unidades">unidades</option>
-                      <option value="cucharadas">cucharadas</option>
-                      <option value="cucharaditas">cucharaditas</option>
-                      <option value="tazas">tazas</option>
-                      <option value="pellizco">pellizco</option>
-                    </select>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeRow(idx)}
-                    className="text-red-400 hover:text-red-600 p-2"
-                    disabled={ingredients.length === 1}
-                    title="Eliminar ingrediente"
+                  {/* ---- Selector de producto (catálogo) ---- */}
+                  <select
+                    value={ing.productId ?? ''}
+                    onChange={e => handleProductSelect(idx, e.target.value)}
+                    className="border-2 border-gray-200 rounded px-3 py-2 w-full text-sm bg-white focus:outline-none focus:border-pink-500"
+                    disabled={!catalogLoaded}
                   >
-                    ✕
-                  </button>
+                    <option value="">-- Elegir del catálogo (opcional) --</option>
+                    {catalog.map(prod => (
+                      <option key={prod.id} value={prod.id}>
+                        {prod.name} {prod.brand ? `(${prod.brand})` : ''} – $ {prod.current_price} / {prod.unit}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Fila con nombre, cantidad, unidad y botón de quitar */}
+                  <div className="flex gap-2 items-start">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="Nombre del ingrediente"
+                        value={ing.name}
+                        onChange={e => updateRow(idx, 'name', e.target.value)}
+                        required
+                        className="border-2 border-gray-200 rounded px-3 py-2 w-full focus:outline-none focus:border-pink-500"
+                      />
+                    </div>
+                    <div className="w-28">
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="Cantidad"
+                        value={ing.quantity}
+                        onChange={e => updateRow(idx, 'quantity', e.target.value)}
+                        required
+                        className="border-2 border-gray-200 rounded px-3 py-2 w-full focus:outline-none focus:border-pink-500"
+                      />
+                    </div>
+                    <div className="w-32">
+                      <select
+                        value={ing.unit}
+                        onChange={e => updateRow(idx, 'unit', e.target.value)}
+                        className="border-2 border-gray-200 rounded px-3 py-2 w-full focus:outline-none focus:border-pink-500 bg-white"
+                      >
+                        <option value="g">gramos (g)</option>
+                        <option value="kg">kilogramos (kg)</option>
+                        <option value="ml">mililitros (ml)</option>
+                        <option value="l">litros (l)</option>
+                        <option value="unidades">unidades</option>
+                        <option value="cucharadas">cucharadas</option>
+                        <option value="cucharaditas">cucharaditas</option>
+                        <option value="tazas">tazas</option>
+                        <option value="pellizco">pellizco</option>
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeRow(idx)}
+                      className="text-red-400 hover:text-red-600 p-2"
+                      disabled={ingredients.length === 1}
+                      title="Eliminar ingrediente"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
