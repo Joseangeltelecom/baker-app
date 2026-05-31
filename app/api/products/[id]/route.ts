@@ -19,14 +19,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   await initializeDB();
   const { id } = await params;
   const body = await request.json();
-  const { name, brand, unit, current_price, store } = body;
+  const { name, brand, unit, package_quantity, current_price, store } = body;
 
   const transaction = await db.transaction('write');
   try {
-    await transaction.execute({
-      sql: "UPDATE products SET name=?, brand=?, unit=?, current_price=?, store=?, updated_at=datetime('now') WHERE id=?",
-      args: [name, brand || null, unit, current_price, store || null, id],
-    });
+        await transaction.execute({
+        sql: "UPDATE products SET name=?, brand=?, unit=?, package_quantity=?, current_price=?, store=?, updated_at=datetime('now') WHERE id=?",
+        args: [name, brand || null, unit, package_quantity, current_price, store || null, id],
+        });
 
     // Si el precio cambió, guardar en historial (comparamos con el precio actual antes de update)
     // Para simplificar, siempre guardamos un nuevo registro en el historial si se modificó el precio

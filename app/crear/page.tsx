@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useCurrency } from '../context/CurrencyContext';
+
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -19,6 +21,7 @@ export default function CreateRecipe() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const { symbol } = useCurrency();
 
   // 📦 Catálogo de productos
   const [catalog, setCatalog] = useState<any[]>([]);
@@ -178,7 +181,7 @@ export default function CreateRecipe() {
                     <option value="">-- Elegir del catálogo (opcional) --</option>
                     {catalog.map(prod => (
                       <option key={prod.id} value={prod.id}>
-                        {prod.name} {prod.brand ? `(${prod.brand})` : ''} – $ {prod.current_price} / {prod.unit}
+                        {prod.name} {prod.brand ? `(${prod.brand})` : ''} – {symbol}{prod.current_price} / {prod.package_quantity} {prod.unit}
                       </option>
                     ))}
                   </select>

@@ -15,16 +15,16 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   await initializeDB();
   const body = await request.json();
-  const { name, brand, unit, current_price, store } = body;
+  const { name, brand, unit, current_price, store,  package_quantity } = body;
 
   if (!name || !unit || current_price == null) {
     return NextResponse.json({ error: 'Nombre, unidad y precio son obligatorios' }, { status: 400 });
   }
 
   const result = await db.execute({
-    sql: 'INSERT INTO products (name, brand, unit, current_price, store) VALUES (?, ?, ?, ?, ?)',
-    args: [name, brand || null, unit, current_price, store || null],
-  });
+  sql: 'INSERT INTO products (name, brand, unit, package_quantity, current_price, store) VALUES (?, ?, ?, ?, ?, ?)',
+  args: [name, brand || null, unit, package_quantity, current_price, store || null],
+});
 
   const productId = Number(result.lastInsertRowid);
 

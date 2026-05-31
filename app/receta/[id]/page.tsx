@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useCurrency } from '@/app/context/CurrencyContext';
 
 // ---------- Tipos ----------
 interface Ingredient {
@@ -16,6 +17,7 @@ interface Ingredient {
   product_unit?: string | null;
   product_brand?: string | null;
   product_store?: string | null;
+  product_package_quantity?: number | null;   // <--- NUEVA LÍNEA
 }
 
 interface Recipe {
@@ -41,16 +43,18 @@ const convertToBase = (quantity: number, unit: string): number => {
 
 const calculateCost = (ing: Ingredient, factor: number) => {
   if (!ing.product_id || ing.product_price == null || ing.product_unit == null) return null;
-
   const scaledQty = ing.quantity * factor;
   const ingredientBaseQty = convertToBase(scaledQty, ing.unit);
-  const productPricePerBase = ing.product_price / convertToBase(1, ing.product_unit);
-  return ingredientBaseQty * productPricePerBase;
+  // Precio por unidad base del paquete
+  const packageQty = ing.product_package_quantity ?? 1; // Asegurar que no sea 0
+  const pricePerBaseUnit = ing.product_price / convertToBase(packageQty, ing.product_unit);
+  return ingredientBaseQty * pricePerBaseUnit;
 };
 
 export default function RecipeScalePage() {
   const params = useParams();
   const { id } = params;
+  const { symbol } = useCurrency();
 
   // ---------- Estado ----------
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -249,7 +253,7 @@ export default function RecipeScalePage() {
                 {ing.product_id && ingredientCost !== undefined && ingredientCost !== null && (
                   <div className="mt-2 ml-8 text-sm">
                     <span className="text-green-700 font-medium">
-                      Costo: ${ingredientCost.toFixed(2)}
+                      Costo: {symbol}{ingredientCost.toFixed(2)}
                     </span>
                     {ing.product_brand && (
                       <span className="text-gray-500 ml-2">
@@ -281,7 +285,7 @@ export default function RecipeScalePage() {
         <div className="space-y-2">
           <div className="flex justify-between items-center text-lg">
             <span className="font-medium">Subtotal de ingredientes</span>
-            <span className="font-bold">${subtotal.toFixed(2)}</span>
+            <span className="font-bold">{symbol}{subtotal.toFixed(2)}</span>
           </div>
 
           {/* Lista de gastos extra */}
@@ -298,7 +302,7 @@ export default function RecipeScalePage() {
                     className="border border-gray-300 rounded px-2 py-1 flex-1 text-sm"
                   />
                   <div className="flex items-center gap-1">
-                    <span className="text-sm">$</span>
+                    <span className="text-sm">{symbol}</span>
                     <input
                       type="number"
                       step="any"
@@ -333,7 +337,7 @@ export default function RecipeScalePage() {
         <div className="border-t border-gray-200 my-4"></div>
         <div className="flex justify-between items-center text-xl">
           <span className="font-bold">Costo total estimado</span>
-          <span className="font-bold text-pink-600">${total.toFixed(2)}</span>
+          <span className="font-bold text-pink-600">{symbol}{total.toFixed(2)}</span>
         </div>
 
         <p className="text-xs text-gray-500 mt-2">

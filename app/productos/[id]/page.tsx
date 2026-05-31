@@ -3,15 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useCurrency } from '../../context/CurrencyContext';
 
 export default function EditProduct() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
+  const { symbol } = useCurrency();
 
   const [name, setName] = useState('');
   const [brand, setBrand] = useState('');
   const [unit, setUnit] = useState('g');
+  const [packageQty, setPackageQty] = useState('');
   const [price, setPrice] = useState('');
   const [store, setStore] = useState('');
   const [loading, setLoading] = useState(true);
@@ -26,9 +29,10 @@ export default function EditProduct() {
         if (data.error) {
           setError(data.error);
         } else {
-          setName(data.name);
+          setName(data.name || '');
           setBrand(data.brand || '');
-          setUnit(data.unit);
+          setUnit(data.unit || 'g');
+          setPackageQty(data.package_quantity?.toString() || '1');
           setPrice(data.current_price?.toString() || '');
           setStore(data.store || '');
           setHistory(data.price_history || []);
@@ -40,17 +44,28 @@ export default function EditProduct() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name || !price || !packageQty) {
+      setError('Nombre, precio y cantidad del paquete son obligatorios');
+      return;
+    }
     setSaving(true);
     const res = await fetch(`/api/products/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, brand, unit, current_price: parseFloat(price), store }),
+      body: JSON.stringify({
+        name,
+        brand,
+        unit,
+        package_quantity: parseFloat(packageQty),
+        current_price: parseFloat(price),
+        store,
+      }),
     });
     if (res.ok) {
       router.push('/productos');
     } else {
       const data = await res.json();
-      setError(data.error || 'Error');
+      setError(data.error || 'Error al actualizar');
     }
     setSaving(false);
   };
@@ -60,12 +75,43 @@ export default function EditProduct() {
 
   return (
     <main className="max-w-2xl mx-auto p-4">
-      <Link href="/productos" className="text-pink-500 underline mb-4 inline-block">← Catálogo</Link>
+      <Link href="/productos" className="text-pink-500 underline mb-4 inline-block">← Volver</Link>
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h1 className="text-2xl font-bold mb-4">Editar Producto</h1>
+        {error && <div className="bg-red-50 text-red-600 p-2 rounded mb-3">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* mismos campos que en crear */}
-          {/* ... (copiar campos del form de crear) ... */}
+          <div>
+            <label className="block font-medium">Nombre *</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} required className="border rounded px-3 py-2 w-full" />
+          </div>
+          <div>
+            <label className="block font-medium">Marca</label>
+            <input type="text" value={brand} onChange={e => setBrand(e.target.value)} className="border rounded px-3 py-2 w-full" />
+          </div>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="block font-medium">Cantidad del paquete *</label>
+              <input type="number" step="any" value={packageQty} onChange={e => setPackageQty(e.target.value)} required className="border rounded px-3 py-2 w-full" />
+            </div>
+            <div className="w-1/3">
+              <label className="block font-medium">Unidad</label>
+              <select value={unit} onChange={e => setUnit(e.target.value)} className="border rounded px-3 py-2 w-full">
+                <option value="g">g</option>
+                <option value="kg">kg</option>
+                <option value="ml">ml</option>
+                <option value="l">l</option>
+                <option value="unidad">unidad</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block font-medium">Precio del paquete ({symbol}) *</label>
+            <input type="number" step="any" value={price} onChange={e => setPrice(e.target.value)} required className="border rounded px-3 py-2 w-full" />
+          </div>
+          <div>
+            <label className="block font-medium">Tienda</label>
+            <input type="text" value={store} onChange={e => setStore(e.target.value)} className="border rounded px-3 py-2 w-full" />
+          </div>
           <button type="submit" disabled={saving} className="bg-pink-500 text-white px-4 py-2 rounded w-full">
             {saving ? 'Actualizando...' : 'Actualizar Producto'}
           </button>
@@ -81,7 +127,7 @@ export default function EditProduct() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left border-b">
-                <th>Fecha</th>
+                <th className="py-1">Fecha</th>
                 <th>Precio</th>
                 <th>Tienda</th>
               </tr>
@@ -89,8 +135,8 @@ export default function EditProduct() {
             <tbody>
               {history.map((entry: any) => (
                 <tr key={entry.id} className="border-b">
-                  <td>{new Date(entry.date).toLocaleDateString()}</td>
-                  <td className="font-bold">${entry.price.toFixed(2)}</td>
+                  <td className="py-1">{new Date(entry.date).toLocaleDateString()}</td>
+                  <td>{symbol} {entry.price.toFixed(2)}</td>
                   <td>{entry.store || '-'}</td>
                 </tr>
               ))}

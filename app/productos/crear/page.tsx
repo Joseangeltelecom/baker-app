@@ -3,11 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useCurrency } from '../../context/CurrencyContext';
 
 export default function CreateProduct() {
+  const { symbol } = useCurrency();
   const [name, setName] = useState('');
   const [brand, setBrand] = useState('');
   const [unit, setUnit] = useState('g');
+  const [packageQty, setPackageQty] = useState('');
   const [price, setPrice] = useState('');
   const [store, setStore] = useState('');
   const [saving, setSaving] = useState(false);
@@ -16,15 +19,22 @@ export default function CreateProduct() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !price) {
-      setError('Nombre y precio son obligatorios');
+    if (!name || !price || !packageQty) {
+      setError('Nombre, precio y cantidad del paquete son obligatorios');
       return;
     }
     setSaving(true);
     const res = await fetch('/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, brand, unit, current_price: parseFloat(price), store }),
+      body: JSON.stringify({
+        name,
+        brand,
+        unit,
+        package_quantity: parseFloat(packageQty),
+        current_price: parseFloat(price),
+        store,
+      }),
     });
     if (res.ok) {
       router.push('/productos');
@@ -52,11 +62,11 @@ export default function CreateProduct() {
           </div>
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="block font-medium">Precio *</label>
-              <input type="number" step="any" value={price} onChange={e => setPrice(e.target.value)} required className="border rounded px-3 py-2 w-full" />
+              <label className="block font-medium">Cantidad del paquete *</label>
+              <input type="number" step="any" value={packageQty} onChange={e => setPackageQty(e.target.value)} placeholder="Ej: 500" required className="border rounded px-3 py-2 w-full" />
             </div>
             <div className="w-1/3">
-              <label className="block font-medium">Unidad *</label>
+              <label className="block font-medium">Unidad</label>
               <select value={unit} onChange={e => setUnit(e.target.value)} className="border rounded px-3 py-2 w-full">
                 <option value="g">g</option>
                 <option value="kg">kg</option>
@@ -65,6 +75,10 @@ export default function CreateProduct() {
                 <option value="unidad">unidad</option>
               </select>
             </div>
+          </div>
+          <div>
+            <label className="block font-medium">Precio del paquete ({symbol}) *</label>
+            <input type="number" step="any" value={price} onChange={e => setPrice(e.target.value)} required className="border rounded px-3 py-2 w-full" />
           </div>
           <div>
             <label className="block font-medium">Tienda</label>

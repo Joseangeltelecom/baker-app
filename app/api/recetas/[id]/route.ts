@@ -27,6 +27,7 @@ export async function GET(
         p.name as product_name,
         p.current_price as product_price,
         p.unit as product_unit,
+        p.package_quantity as product_package_quantity,
         p.brand as product_brand,
         p.store as product_store
       FROM ingredients i
