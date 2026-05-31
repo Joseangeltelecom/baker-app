@@ -36,35 +36,36 @@ export default function EscanearPage() {
     reader.readAsDataURL(file);
   };
 
-  const analyzeImage = async (base64Data: string) => {
-    setAnalyzing(true);
-    setError('');
-    try {
-      const res = await fetch('/api/analyze-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: base64Data }),
+const analyzeImage = async (base64Data: string) => {
+  setAnalyzing(true);
+  setError('');
+  try {
+    const res = await fetch('/api/analyze-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64Data }),
+    });
+    const data = await res.json();
+    if (data.error) {
+      // Mostrar mensaje detallado
+      setError(`Error: ${data.error}${data.details ? ' (ver consola)' : ''}`);
+      console.log('Detalles del error:', data.details || data.raw_text || data);
+    } else {
+      setForm({
+        name: data.name || '',
+        brand: data.brand || '',
+        price: data.price ? data.price.toString() : '',
+        package_quantity: data.package_quantity ? data.package_quantity.toString() : '',
+        unit: data.unit || 'g',
+        store: data.store || '',
       });
-      const data = await res.json();
-      if (data.error) {
-        setError(data.error);
-      } else {
-        // Rellenar formulario con los datos extraídos
-        setForm({
-          name: data.name || '',
-          brand: data.brand || '',
-          price: data.price ? data.price.toString() : '',
-          package_quantity: data.package_quantity ? data.package_quantity.toString() : '',
-          unit: data.unit || 'g',
-          store: data.store || '',
-        });
-      }
-    } catch (err) {
-      setError('Error de conexión al analizar');
-    } finally {
-      setAnalyzing(false);
     }
-  };
+  } catch (err) {
+    setError('Error de conexión al analizar');
+  } finally {
+    setAnalyzing(false);
+  }
+};
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
