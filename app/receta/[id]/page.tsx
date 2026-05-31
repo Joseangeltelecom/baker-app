@@ -218,7 +218,12 @@ export default function RecipeScalePage() {
                   />
                   <label htmlFor={`ing-${ing.id}`} className="flex-1 cursor-pointer">
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold text-lg">{ing.name}</span>
+                    <span className="font-semibold text-lg">
+                      {ing.name}
+                      {ing.product_brand && (
+                        <span className="ml-1 text-sm text-gray-500 font-normal">({ing.product_brand})</span>
+                      )}
+                    </span>
                       <span className="text-sm text-gray-500">({originalText})</span>
                     </div>
                   </label>
