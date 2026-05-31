@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <nav className="flex justify-center gap-6 mt-3 text-sm font-medium">
                 <Link href="/" className="hover:text-yellow-200 transition-colors">🍰 Recetas</Link>
                 <Link href="/productos" className="hover:text-yellow-200 transition-colors">📦 Productos</Link>
-                {/* <Link href="/escanear" className="hover:text-yellow-200 transition-colors">📸 Escanear</Link> */}
+                <Link href="/escanear" className="hover:text-yellow-200 transition-colors">📸 Escanear</Link>
                 <Link href="/configuracion" className="hover:text-yellow-200 transition-colors">⚙️ Moneda</Link>
               </nav>
             </div>
