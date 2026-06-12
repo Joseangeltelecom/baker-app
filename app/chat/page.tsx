@@ -226,11 +226,13 @@ export default function ChatPage() {
       );
     }
 
+    const displayText = msg.text.replace(/<!--RECIPE-->[\s\S]*?<!--END_RECIPE-->/g, '').trim();
+
     return (
       <div key={i} className="flex justify-start">
         <div className="max-w-[85%] bg-gray-50 border border-gray-200 text-gray-800 p-4 rounded-2xl rounded-bl-sm shadow-sm">
           <div className="prose prose-sm prose-pink max-w-none [&_ul]:pl-4 [&_li]:mb-0.5 [&_strong]:text-pink-600">
-            {formatMessage(msg.text)}
+            {formatMessage(displayText)}
           </div>
         </div>
       </div>
