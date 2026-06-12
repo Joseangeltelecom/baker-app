@@ -49,12 +49,12 @@ export async function POST(request: NextRequest) {
       }
 
       for (const ing of ingredients) {
-        if (!ing.name || !ing.quantity || !ing.unit) {
-          throw new Error('Cada ingrediente debe tener nombre, cantidad y unidad');
-        }
+        if (!ing.name || !ing.unit) continue;
+        const qty = parseFloat(ing.quantity);
+        if (isNaN(qty)) continue;
         await transaction.execute({
           sql: 'INSERT INTO ingredients (recipe_id, name, quantity, unit, product_id) VALUES (?, ?, ?, ?, ?)',
-          args: [recipeId, ing.name, ing.quantity, ing.unit, ing.product_id || null],
+          args: [recipeId, ing.name, qty, ing.unit, ing.product_id || null],
         });
       }
 

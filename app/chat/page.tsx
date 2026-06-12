@@ -203,11 +203,16 @@ export default function ChatPage() {
   const saveRecipeFromChat = async () => {
     if (!recipeBlock) return;
     try {
-      await fetch('/api/recetas', {
+      const res = await fetch('/api/recetas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(recipeBlock),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Error desconocido' }));
+        showToast(err.error || 'Error al guardar');
+        return;
+      }
       setRecipeBlock(null);
       showToast('Receta guardada exitosamente');
     } catch (e) {
