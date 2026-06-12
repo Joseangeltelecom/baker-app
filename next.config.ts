@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Prevents Next.js from bundling @libsql/client through webpack,
-  // avoiding native binding issues and reducing dev memory overhead
+  // Evita que Next.js bundlee @libsql/client via webpack
   serverExternalPackages: ['@libsql/client'],
 };
 
