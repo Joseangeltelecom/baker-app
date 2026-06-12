@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, initializeDB } from '@/lib/db';
+import { auth } from '@/auth';
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
     await initializeDB();
-    const result = await db.execute('SELECT * FROM recipes ORDER BY created_at DESC');
+    const result = await db.execute({
+      sql: 'SELECT * FROM recipes WHERE user_id = ? ORDER BY created_at DESC',
+      args: [session.user.id],
+    });
     return NextResponse.json(result.rows);
   } catch (error) {
     console.error('Error al obtener recetas:', error);
@@ -14,6 +22,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
     await initializeDB();
     const body = await request.json();
     const { name, ingredients } = body;
@@ -22,14 +34,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Faltan datos obligatorios' }, { status: 400 });
     }
 
-    // Usar transacción
     const transaction = await db.transaction('write');
 
     try {
-      // Insertar receta
       const recipeResult = await transaction.execute({
-        sql: 'INSERT INTO recipes (name) VALUES (?)',
-        args: [name],
+        sql: 'INSERT INTO recipes (name, user_id) VALUES (?, ?)',
+        args: [name, session.user.id],
       });
 
       const recipeId = Number(recipeResult.lastInsertRowid);
@@ -38,7 +48,6 @@ export async function POST(request: NextRequest) {
         throw new Error('No se pudo crear la receta');
       }
 
-      // Insertar ingredientes
       for (const ing of ingredients) {
         if (!ing.name || !ing.quantity || !ing.unit) {
           throw new Error('Cada ingrediente debe tener nombre, cantidad y unidad');
@@ -51,7 +60,6 @@ export async function POST(request: NextRequest) {
 
       await transaction.commit();
 
-      // Obtener la receta creada
       const recipe = await db.execute({
         sql: 'SELECT * FROM recipes WHERE id = ?',
         args: [recipeId],

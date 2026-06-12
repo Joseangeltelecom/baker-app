@@ -1,18 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, initializeDB } from '@/lib/db';
+import { auth } from '@/auth';
 
 export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
   await initializeDB();
-  const result = await db.execute(`
-    SELECT p.*, 
-      (SELECT COUNT(*) FROM product_prices WHERE product_id = p.id) as price_count
-    FROM products p
-    ORDER BY p.name ASC
-  `);
+  const result = await db.execute({
+    sql: `
+      SELECT p.*, 
+        (SELECT COUNT(*) FROM product_prices WHERE product_id = p.id) as price_count
+      FROM products p
+      WHERE p.user_id = ?
+      ORDER BY p.name ASC
+    `,
+    args: [session.user.id],
+  });
   return NextResponse.json(result.rows);
 }
 
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
   await initializeDB();
   const body = await request.json();
   const { name, brand, unit, current_price, store,  package_quantity } = body;
@@ -22,13 +35,12 @@ export async function POST(request: NextRequest) {
   }
 
   const result = await db.execute({
-  sql: 'INSERT INTO products (name, brand, unit, package_quantity, current_price, store) VALUES (?, ?, ?, ?, ?, ?)',
-  args: [name, brand || null, unit, package_quantity, current_price, store || null],
-});
+    sql: 'INSERT INTO products (name, brand, unit, package_quantity, current_price, store, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    args: [name, brand || null, unit, package_quantity, current_price, store || null, session.user.id],
+  });
 
   const productId = Number(result.lastInsertRowid);
 
-  // Guardar el primer precio en el historial
   await db.execute({
     sql: 'INSERT INTO product_prices (product_id, price, store) VALUES (?, ?, ?)',
     args: [productId, current_price, store || null],

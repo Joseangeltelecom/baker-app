@@ -1,19 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, initializeDB } from '@/lib/db';
+import { auth } from '@/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
     await initializeDB();
 
-    // ✅ ESPERAR a que params se resuelva
     const { id } = await params;
 
     const recipeResult = await db.execute({
-      sql: 'SELECT * FROM recipes WHERE id = ?',
-      args: [id],
+      sql: 'SELECT * FROM recipes WHERE id = ? AND user_id = ?',
+      args: [id, session.user.id],
     });
 
     if (recipeResult.rows.length === 0) {
@@ -55,9 +59,12 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
     await initializeDB();
-    
-    // ✅ ESPERAR a que params se resuelva
+
     const { id } = await params;
     const body = await request.json();
     const { name, ingredients } = body;
@@ -66,8 +73,8 @@ export async function PUT(
 
     try {
       await transaction.execute({
-        sql: "UPDATE recipes SET name = ?, updated_at = datetime('now') WHERE id = ?",
-        args: [name, id],
+        sql: "UPDATE recipes SET name = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?",
+        args: [name, id, session.user.id],
       });
 
       await transaction.execute({
@@ -85,8 +92,8 @@ export async function PUT(
       await transaction.commit();
 
       const updated = await db.execute({
-        sql: 'SELECT * FROM recipes WHERE id = ?',
-        args: [id],
+        sql: 'SELECT * FROM recipes WHERE id = ? AND user_id = ?',
+        args: [id, session.user.id],
       });
 
       return NextResponse.json(updated.rows[0]);
@@ -105,9 +112,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
     await initializeDB();
 
-    // ✅ ESPERAR a que params se resuelva
     const { id } = await params;
 
     await db.execute({
@@ -116,8 +126,8 @@ export async function DELETE(
     });
 
     await db.execute({
-      sql: 'DELETE FROM recipes WHERE id = ?',
-      args: [id],
+      sql: 'DELETE FROM recipes WHERE id = ? AND user_id = ?',
+      args: [id, session.user.id],
     });
 
     return NextResponse.json({ success: true, message: 'Receta eliminada' });

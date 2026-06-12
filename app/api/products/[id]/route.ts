@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, initializeDB } from '@/lib/db';
+import { auth } from '@/auth';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
   await initializeDB();
   const { id } = await params;
-  const product = await db.execute({ sql: 'SELECT * FROM products WHERE id = ?', args: [id] });
+  const product = await db.execute({
+    sql: 'SELECT * FROM products WHERE id = ? AND user_id = ?',
+    args: [id, session.user.id],
+  });
   if (product.rows.length === 0) {
     return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
   }
@@ -16,6 +24,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
   await initializeDB();
   const { id } = await params;
   const body = await request.json();
@@ -23,13 +35,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   const transaction = await db.transaction('write');
   try {
-        await transaction.execute({
-        sql: "UPDATE products SET name=?, brand=?, unit=?, package_quantity=?, current_price=?, store=?, updated_at=datetime('now') WHERE id=?",
-        args: [name, brand || null, unit, package_quantity, current_price, store || null, id],
-        });
+    await transaction.execute({
+      sql: "UPDATE products SET name=?, brand=?, unit=?, package_quantity=?, current_price=?, store=?, updated_at=datetime('now') WHERE id=? AND user_id=?",
+      args: [name, brand || null, unit, package_quantity, current_price, store || null, id, session.user.id],
+    });
 
-    // Si el precio cambió, guardar en historial (comparamos con el precio actual antes de update)
-    // Para simplificar, siempre guardamos un nuevo registro en el historial si se modificó el precio
     const prev = await db.execute({ sql: 'SELECT current_price FROM products WHERE id = ?', args: [id] });
     const oldPrice = (prev.rows[0] as any)?.current_price;
     if (oldPrice !== undefined && parseFloat(oldPrice) !== parseFloat(current_price)) {
@@ -49,8 +59,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
   await initializeDB();
   const { id } = await params;
-  await db.execute({ sql: 'DELETE FROM products WHERE id = ?', args: [id] });
+  await db.execute({
+    sql: 'DELETE FROM products WHERE id = ? AND user_id = ?',
+    args: [id, session.user.id],
+  });
   return NextResponse.json({ success: true });
 }

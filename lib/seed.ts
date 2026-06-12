@@ -1,17 +1,19 @@
 import { db, initializeDB } from './db';
 
-export async function seedRecipes() {
+export async function seedRecipes(userId: string) {
   await initializeDB();
 
-  // Verificar si ya hay recetas
-  const count = await db.execute('SELECT COUNT(*) as count FROM recipes');
+  // Verificar si el usuario ya tiene recetas
+  const count = await db.execute({
+    sql: 'SELECT COUNT(*) as count FROM recipes WHERE user_id = ?',
+    args: [userId],
+  });
   const row = count.rows[0] as any;
   if (row && row.count > 0) {
-    console.log('Ya existen recetas en la base de datos');
+    console.log('El usuario ya tiene recetas');
     return;
   }
 
-  // Datos de recetas predefinidas
   const seedRecipes = [
     {
       name: 'Bizcocho básico',
@@ -70,15 +72,14 @@ export async function seedRecipes() {
     },
   ];
 
-  // Insertar recetas
   for (const recipe of seedRecipes) {
     const recipeResult = await db.execute({
-      sql: 'INSERT INTO recipes (name) VALUES (?)',
-      args: [recipe.name],
+      sql: 'INSERT INTO recipes (name, user_id) VALUES (?, ?)',
+      args: [recipe.name, userId],
     });
-    
+
     const recipeId = Number(recipeResult.lastInsertRowid);
-    
+
     if (recipeId) {
       for (const ing of recipe.ingredients) {
         await db.execute({

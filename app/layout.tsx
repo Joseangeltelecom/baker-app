@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { CurrencyProvider } from './context/CurrencyContext';
+import SessionProvider from './components/SessionProvider';
+import HeaderNav from './components/HeaderNav';
+import AuthNav from './components/AuthNav';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -12,28 +14,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body className="bg-orange-50 min-h-screen">
-        <CurrencyProvider>
-          <header className="bg-pink-500 text-white py-4 shadow-md">
-            <div className="max-w-4xl mx-auto px-4">
-              <h1 className="text-2xl font-bold text-center">🧁 Delicias da Julieta</h1>
-              <p className="text-center text-pink-100 text-sm mt-1">
-                Escala tus recetas favoritas fácilmente
-              </p>
-            <nav className="flex justify-center flex-wrap gap-4 mt-3 text-sm font-medium">
-              <Link href="/" className="hover:text-yellow-200 transition-colors">🍰 Recetas</Link>
-              <Link href="/crear-ia" className="hover:text-yellow-200 transition-colors">🧠 IA</Link>
-              <Link href="/productos" className="hover:text-yellow-200 transition-colors">📦 Productos</Link>
-              <Link href="/chat" className="hover:text-yellow-200 transition-colors">💬 Chat</Link>
-              <Link href="/escanear" className="hover:text-yellow-200 transition-colors">📸 Escanear</Link>
-              <Link href="/configuracion" className="hover:text-yellow-200 transition-colors">⚙️ Moneda</Link>
-            </nav>
-            </div>
-          </header>
-          {children}
-          <footer className="text-center py-4 text-gray-500 text-sm">
-            Hecho con ❤️ para la mejor repostera
-          </footer>
-        </CurrencyProvider>
+        <SessionProvider>
+          <CurrencyProvider>
+            <header className="bg-pink-500 text-white py-4 shadow-md">
+              <div className="max-w-4xl mx-auto px-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold">🧁 Delicias da Julieta</h1>
+                    <p className="text-pink-100 text-sm mt-1">
+                      Escala tus recetas favoritas fácilmente
+                    </p>
+                  </div>
+                  <AuthNav />
+                </div>
+                <HeaderNav />
+              </div>
+            </header>
+            {children}
+            <footer className="text-center py-4 text-gray-500 text-sm">
+              Hecho con ❤️ para la mejor repostera
+            </footer>
+          </CurrencyProvider>
+        </SessionProvider>
       </body>
     </html>
   );
