@@ -12,7 +12,7 @@ interface Message {
 
 export default function ChatPage() {
   const { symbol } = useCurrency();
-  const { transcript, listening, start, stop, reset: resetTranscript, supported: voiceSupported } = useSpeechRecognition();
+  const { transcript, interim, listening, start, stop, reset: resetTranscript, supported: voiceSupported } = useSpeechRecognition();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,6 +26,9 @@ export default function ChatPage() {
   useEffect(() => {
     if (transcript) setInput(transcript);
   }, [transcript]);
+
+  // Mostrar resultados parciales en vivo mientras se habla
+  const displayValue = listening && interim ? interim : input;
 
   const sendMessage = async (text?: string) => {
     const finalText = (text || input).trim();
@@ -131,10 +134,10 @@ export default function ChatPage() {
         )}
         <input
           type="text"
-          value={input}
+          value={displayValue}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-          placeholder="Pregúntame algo de repostería..."
+          placeholder={listening ? 'Escuchando...' : 'Pregúntame algo de repostería...'}
           className="flex-1 border-2 border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:border-pink-500"
         />
         <button
