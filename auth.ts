@@ -24,7 +24,13 @@ declare module "next-auth" {
 
 export async function getUserId(request: NextRequest): Promise<string | null> {
   try {
-    const token = await getToken({ req: request as any, secret: process.env.AUTH_SECRET })
+    const secureCookie = request.headers.get('x-forwarded-proto') === 'https' ||
+      request.nextUrl.protocol === 'https:'
+    const token = await getToken({
+      req: request as any,
+      secret: process.env.AUTH_SECRET,
+      secureCookie,
+    })
     return (token?.id as string) ?? null
   } catch {
     return null
