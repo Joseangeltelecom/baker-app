@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, initializeDB } from '@/lib/db';
-import { auth } from '@/auth';
+import { getUserId } from '@/auth';
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
+export async function GET(request: NextRequest) {
+  const userId = await getUserId(request);
+  if (!userId) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   await initializeDB();
@@ -16,14 +16,14 @@ export async function GET() {
       WHERE p.user_id = ?
       ORDER BY p.name ASC
     `,
-    args: [session.user.id],
+    args: [userId],
   });
   return NextResponse.json(result.rows);
 }
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const userId = await getUserId(request);
+  if (!userId) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   await initializeDB();
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
   const result = await db.execute({
     sql: 'INSERT INTO products (name, brand, unit, package_quantity, current_price, store, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    args: [name, brand || null, unit, package_quantity, current_price, store || null, session.user.id],
+    args: [name, brand || null, unit, package_quantity, current_price, store || null, userId],
   });
 
   const productId = Number(result.lastInsertRowid);

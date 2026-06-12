@@ -1,20 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db, initializeDB } from '@/lib/db';
-import { auth } from '@/auth';
+import { getUserId } from '@/auth';
 import { seedRecipes } from '@/lib/seed';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getUserId(request);
+    if (!userId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
     await initializeDB();
 
-    const userId = session.user.id;
-
-    // Verificar si el usuario ya tiene recetas
     const count = await db.execute({
       sql: 'SELECT COUNT(*) as count FROM recipes WHERE user_id = ?',
       args: [userId],

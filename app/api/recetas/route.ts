@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, initializeDB } from '@/lib/db';
-import { auth } from '@/auth';
+import { getUserId } from '@/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getUserId(request);
+    if (!userId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
     await initializeDB();
     const result = await db.execute({
       sql: 'SELECT * FROM recipes WHERE user_id = ? ORDER BY created_at DESC',
-      args: [session.user.id],
+      args: [userId],
     });
     return NextResponse.json(result.rows);
   } catch (error) {
@@ -22,8 +22,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getUserId(request);
+    if (!userId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
     await initializeDB();
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     try {
       const recipeResult = await transaction.execute({
         sql: 'INSERT INTO recipes (name, user_id) VALUES (?, ?)',
-        args: [name, session.user.id],
+        args: [name, userId],
       });
 
       const recipeId = Number(recipeResult.lastInsertRowid);

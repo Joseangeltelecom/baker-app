@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, initializeDB } from '@/lib/db';
-import { auth } from '@/auth';
+import { getUserId } from '@/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getUserId(request);
+    if (!userId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
     await initializeDB();
@@ -17,30 +17,30 @@ export async function GET(
 
     const recipeResult = await db.execute({
       sql: 'SELECT * FROM recipes WHERE id = ? AND user_id = ?',
-      args: [id, session.user.id],
+      args: [id, userId],
     });
 
     if (recipeResult.rows.length === 0) {
       return NextResponse.json({ error: 'Receta no encontrada' }, { status: 404 });
     }
 
-  const ingredientsResult = await db.execute({
-    sql: `
-      SELECT 
-        i.id, i.recipe_id, i.name, i.quantity, i.unit, i.product_id,
-        p.name as product_name,
-        p.current_price as product_price,
-        p.unit as product_unit,
-        p.package_quantity as product_package_quantity,
-        p.brand as product_brand,
-        p.store as product_store
-      FROM ingredients i
-      LEFT JOIN products p ON i.product_id = p.id
-      WHERE i.recipe_id = ?
-      ORDER BY i.id ASC
-    `,
-    args: [id],
-  });
+    const ingredientsResult = await db.execute({
+      sql: `
+        SELECT 
+          i.id, i.recipe_id, i.name, i.quantity, i.unit, i.product_id,
+          p.name as product_name,
+          p.current_price as product_price,
+          p.unit as product_unit,
+          p.package_quantity as product_package_quantity,
+          p.brand as product_brand,
+          p.store as product_store
+        FROM ingredients i
+        LEFT JOIN products p ON i.product_id = p.id
+        WHERE i.recipe_id = ?
+        ORDER BY i.id ASC
+      `,
+      args: [id],
+    });
 
     const recipe = {
       ...recipeResult.rows[0],
@@ -59,8 +59,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getUserId(request);
+    if (!userId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
     await initializeDB();
@@ -74,7 +74,7 @@ export async function PUT(
     try {
       await transaction.execute({
         sql: "UPDATE recipes SET name = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?",
-        args: [name, id, session.user.id],
+        args: [name, id, userId],
       });
 
       await transaction.execute({
@@ -93,7 +93,7 @@ export async function PUT(
 
       const updated = await db.execute({
         sql: 'SELECT * FROM recipes WHERE id = ? AND user_id = ?',
-        args: [id, session.user.id],
+        args: [id, userId],
       });
 
       return NextResponse.json(updated.rows[0]);
@@ -112,8 +112,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getUserId(request);
+    if (!userId) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
     await initializeDB();
@@ -127,7 +127,7 @@ export async function DELETE(
 
     await db.execute({
       sql: 'DELETE FROM recipes WHERE id = ? AND user_id = ?',
-      args: [id, session.user.id],
+      args: [id, userId],
     });
 
     return NextResponse.json({ success: true, message: 'Receta eliminada' });

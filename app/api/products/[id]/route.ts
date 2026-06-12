@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, initializeDB } from '@/lib/db';
-import { auth } from '@/auth';
+import { getUserId } from '@/auth';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const userId = await getUserId(request);
+  if (!userId) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   await initializeDB();
   const { id } = await params;
   const product = await db.execute({
     sql: 'SELECT * FROM products WHERE id = ? AND user_id = ?',
-    args: [id, session.user.id],
+    args: [id, userId],
   });
   if (product.rows.length === 0) {
     return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
@@ -24,8 +24,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const userId = await getUserId(request);
+  if (!userId) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   await initializeDB();
@@ -37,7 +37,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     await transaction.execute({
       sql: "UPDATE products SET name=?, brand=?, unit=?, package_quantity=?, current_price=?, store=?, updated_at=datetime('now') WHERE id=? AND user_id=?",
-      args: [name, brand || null, unit, package_quantity, current_price, store || null, id, session.user.id],
+      args: [name, brand || null, unit, package_quantity, current_price, store || null, id, userId],
     });
 
     const prev = await db.execute({ sql: 'SELECT current_price FROM products WHERE id = ?', args: [id] });
@@ -59,15 +59,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const userId = await getUserId(request);
+  if (!userId) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   await initializeDB();
   const { id } = await params;
   await db.execute({
     sql: 'DELETE FROM products WHERE id = ? AND user_id = ?',
-    args: [id, session.user.id],
+    args: [id, userId],
   });
   return NextResponse.json({ success: true });
 }

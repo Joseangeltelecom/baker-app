@@ -1,8 +1,10 @@
 import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
+import { getToken } from "next-auth/jwt"
 import { compare } from "bcryptjs"
 import { db, initializeDB } from "@/lib/db"
+import type { NextRequest } from "next/server"
 
 declare module "next-auth" {
   interface User {
@@ -20,6 +22,14 @@ declare module "next-auth" {
   }
 }
 
+export async function getUserId(request: NextRequest): Promise<string | null> {
+  try {
+    const token = await getToken({ req: request as any, secret: process.env.AUTH_SECRET })
+    return (token?.id as string) ?? null
+  } catch {
+    return null
+  }
+}
 
 async function findOrCreateGoogleUser(profile: { email?: string | null; name?: string | null; picture?: string | null; sub?: string }) {
   if (!profile.email) return null
