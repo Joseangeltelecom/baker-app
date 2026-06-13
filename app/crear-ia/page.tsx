@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCurrency } from '../context/CurrencyContext';
@@ -9,7 +9,7 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 export default function CrearRecetaIA() {
   const { symbol } = useCurrency();
   const router = useRouter();
-  const { transcript, listening, start, stop, reset: resetTranscript, supported: voiceSupported } = useSpeechRecognition();
+  const { transcript, interim, listening, start, stop, reset: resetTranscript, supported: voiceSupported } = useSpeechRecognition();
   const [prompt, setPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
   const [recipe, setRecipe] = useState<any>(null);
@@ -18,8 +18,16 @@ export default function CrearRecetaIA() {
   const [editIngredients, setEditIngredients] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
 
+  // Sincronizar transcripción al textarea
+  useEffect(() => {
+    if (transcript) setPrompt(transcript);
+  }, [transcript]);
+
+  // Mostrar resultados parciales en vivo mientras se habla
+  const displayPrompt = listening && interim ? interim : prompt;
+
   // Combinar texto del prompt con la transcripción de voz
-  const finalPrompt = `${prompt} ${transcript}`.trim();
+  const finalPrompt = displayPrompt.trim();
 
   const handleGenerate = async () => {
     if (!finalPrompt) return;
@@ -97,9 +105,9 @@ export default function CrearRecetaIA() {
         {/* Entrada de texto y voz */}
         <div className="space-y-4">
           <textarea
-            value={prompt}
+            value={displayPrompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Ej: Torta de chocolate húmeda con cobertura de ganache, para 8 personas..."
+            placeholder={listening ? 'Escuchando...' : 'Ej: Torta de chocolate húmeda con cobertura de ganache, para 8 personas...'}
             className="border-2 border-gray-200 rounded-lg px-4 py-3 w-full h-32 resize-none focus:outline-none focus:border-pink-500"
           />
           <div className="flex flex-col sm:flex-row gap-3">
@@ -120,11 +128,6 @@ export default function CrearRecetaIA() {
               Limpiar
             </button>
           </div>
-          {transcript && (
-            <div className="bg-gray-50 p-2 rounded text-sm text-gray-700">
-              🎙️ {transcript}
-            </div>
-          )}
         </div>
 
         <button
