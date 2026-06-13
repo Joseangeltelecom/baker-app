@@ -9,10 +9,36 @@ export function useSpeechRecognition() {
   const finalRef = useRef('');
   const listeningRef = useRef(false);
   const restartTimerRef = useRef<any>(null);
+  const silenceTimerRef = useRef<any>(null);
 
   const supported =
     typeof window !== 'undefined' &&
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+
+  const clearSilenceTimer = () => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  };
+
+  const autoStop = useCallback(() => {
+    listeningRef.current = false;
+    clearSilenceTimer();
+    if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+    }
+    setListening(false);
+    setInterim('');
+  }, []);
+
+  const resetSilenceTimer = useCallback(() => {
+    clearSilenceTimer();
+    if (listeningRef.current) {
+      silenceTimerRef.current = setTimeout(autoStop, 2000);
+    }
+  }, [autoStop]);
 
   useEffect(() => {
     if (!supported) return;
@@ -40,6 +66,8 @@ export function useSpeechRecognition() {
       finalRef.current = finalTranscript;
       setTranscript(finalTranscript);
       setInterim(interimTranscript);
+
+      resetSilenceTimer();
     };
 
     recognition.onerror = (event: any) => {
@@ -50,10 +78,12 @@ export function useSpeechRecognition() {
     };
 
     recognition.onend = () => {
+      clearSilenceTimer();
       if (listeningRef.current) {
         restartTimerRef.current = setTimeout(() => {
           if (listeningRef.current) {
             try { recognition.start(); } catch {}
+            resetSilenceTimer();
           }
         }, 100);
       } else {
@@ -64,11 +94,12 @@ export function useSpeechRecognition() {
     recognitionRef.current = recognition;
 
     return () => {
+      clearSilenceTimer();
       if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
       listeningRef.current = false;
       try { recognition.abort(); } catch {}
     };
-  }, [supported]);
+  }, [supported, resetSilenceTimer]);
 
   const start = useCallback(() => {
     if (recognitionRef.current && !listeningRef.current) {
@@ -78,11 +109,13 @@ export function useSpeechRecognition() {
       listeningRef.current = true;
       setListening(true);
       try { recognitionRef.current.start(); } catch {}
+      resetSilenceTimer();
     }
-  }, []);
+  }, [resetSilenceTimer]);
 
   const stop = useCallback(() => {
     listeningRef.current = false;
+    clearSilenceTimer();
     if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch {}
