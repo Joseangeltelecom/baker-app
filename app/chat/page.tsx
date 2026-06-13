@@ -140,6 +140,7 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [recipeBlock, setRecipeBlock] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -201,7 +202,8 @@ export default function ChatPage() {
   };
 
   const saveRecipeFromChat = async () => {
-    if (!recipeBlock) return;
+    if (!recipeBlock || saving) return;
+    setSaving(true);
     try {
       const res = await fetch('/api/recetas', {
         method: 'POST',
@@ -217,6 +219,8 @@ export default function ChatPage() {
       showToast('Receta guardada exitosamente');
     } catch (e) {
       showToast('Error al guardar la receta');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -288,9 +292,17 @@ export default function ChatPage() {
             <div className="flex gap-2 shrink-0">
               <button
                 onClick={saveRecipeFromChat}
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                disabled={saving}
+                className="bg-green-500 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
               >
-                💾 Guardar
+                {saving ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Guardando…
+                  </>
+                ) : (
+                  '💾 Guardar'
+                )}
               </button>
               <button
                 onClick={() => setRecipeBlock(null)}
